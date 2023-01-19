@@ -1,0 +1,15 @@
+{
+  "name": "gltf-transform-xatlas",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "cd xatlas.js && sh build_web.sh"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@gltf-transform/core": "^2.5.1"
+  }
+}

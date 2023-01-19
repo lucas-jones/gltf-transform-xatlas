@@ -1,0 +1,24 @@
+lockfileVersion: 5.4
+
+specifiers:
+  '@gltf-transform/core': ^2.5.1
+
+dependencies:
+  '@gltf-transform/core': 2.5.1
+
+packages:
+
+  /@gltf-transform/core/2.5.1:
+    resolution: {integrity: sha512-Ah4TVzQtlUpEOJPJovgobbviec7og7NaSo9f+Lg0kJCk3Wwjl++FuDHKCDYEB+CQL8CoLpfB62+8t+NH5buedg==}
+    dependencies:
+      gl-matrix: 3.4.3
+      property-graph: 0.2.6
+    dev: false
+
+  /gl-matrix/3.4.3:
+    resolution: {integrity: sha512-wcCp8vu8FT22BnvKVPjXa/ICBWRq/zjFfdofZy1WSpQZpphblv12/bOQLBC1rMM7SGOFS9ltVmKOHil5+Ml7gA==}
+    dev: false
+
+  /property-graph/0.2.6:
+    resolution: {integrity: sha512-QiBHxNZlwIarbkxsqCY688aP1ANbwtoQFBYgTZopQ0Bvku6/EYp3H4KH0ygxkhWQbJv5DEONspLy1rHi5xIycg==}
+    dev: false
