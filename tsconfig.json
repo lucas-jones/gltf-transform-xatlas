@@ -1,0 +1,19 @@
+{
+    "compilerOptions": {
+      "baseUrl": "./",
+      "esModuleInterop": true,
+      "moduleResolution": "node",
+      "lib": ["es6", "dom"],
+      "target": "es6",
+      "declaration": true,
+      "stripInternal": true,
+      "typeRoots": ["node_modules/@types"],
+      // Components of "strict" mode.
+      "alwaysStrict": true,
+      "strictFunctionTypes": true,
+      "strictBindCallApply": true,
+      "noImplicitThis": true,
+    },
+    "include": [
+      "src/**/*.ts",
+  }

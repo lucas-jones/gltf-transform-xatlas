@@ -28,7 +28,7 @@ export const unwrap = async (document: Document, input: (Mesh | Primitive)[], op
 		...options,
 	};
 
-	const primitives = [];
+	const primitives: Primitive[] = [];
 
 	for (const item of input) {
 		if (item instanceof Mesh) {

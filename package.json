@@ -2,14 +2,20 @@
   "name": "gltf-transform-xatlas",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  
   "scripts": {
-    "build": "cd xatlas.js && sh build_web.sh"
+    "compile": "cd xatlas.js && sh build_web.sh",
+    "build": "tsup src/index.ts --target esnext --dts --external @gltf-transform/core --sourcemap"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "@gltf-transform/core": "^2.5.1"
+  },
+  "devDependencies": {
+    "tsup": "^6.5.0"
   }
 }
