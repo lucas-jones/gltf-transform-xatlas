@@ -1,25 +1,56 @@
-import { Document, Primitive } from '@gltf-transform/core';
-import XAtlas, { AddMeshStatus } from './xatlas/xatlas';
+import { Document, Primitive, Mesh } from '@gltf-transform/core';
+import XAtlas, { ChartOptions, PackOptions } from './xatlas/xatlas';
 
-export const unwrap = async (document: Document, ...input: Primitive[]) => {
+export enum AddMeshStatus {
+	Success,
+	Error,
+	IndexOutOfRange,
+	InvalidIndexCount,
+}
+
+type XAtlasOptions = {
+	chartOptions: Partial<ChartOptions>,
+	packOptions: Partial<PackOptions>,
+	attributeName: string,
+}
+
+const DEFAULT_OPTIONS = {
+	chartOptions: {},
+	packOptions: {},
+	attributeName: "TEXCOORD_1"
+}
+
+export const unwrap = async (document: Document, input: (Mesh | Primitive)[], options: Partial<XAtlasOptions> = {}) => {
 	const xAtlas = await XAtlas();
+
+	options = {
+		...DEFAULT_OPTIONS,
+		...options,
+	};
+
+	const primitives = [];
+
+	for (const item of input) {
+		if (item instanceof Mesh) {
+			primitives.push(...item.listPrimitives());
+		}
+		else {
+			primitives.push(item);
+		}
+	}
 
 	const map = new Map<number, Primitive>();
 
 	xAtlas.createAtlas();
 
-	for (const primitive of input) {
+	for (const primitive of primitives) {
 		const indices = primitive.getIndices()?.getArray()!;
 		const positions = primitive.getAttribute('POSITION')?.getArray()!;
-		const normal = primitive.getAttribute('NORMAL')?.getArray()!;
-		const uv = primitive.getAttribute('TEXCOORD_0')?.getArray()!;
 
-		const meshInfo = xAtlas.createMesh(positions.length / 3, indices.length, true, true);
+		const meshInfo = xAtlas.createMesh(positions.length / 3, indices.length, false, false);
 
 		xAtlas.HEAPU16.set(indices, meshInfo.indexOffset / Uint16Array.BYTES_PER_ELEMENT);
 		xAtlas.HEAPF32.set(positions, meshInfo.positionOffset / Float32Array.BYTES_PER_ELEMENT);
-		xAtlas.HEAPF32.set(normal, meshInfo.normalOffset / Float32Array.BYTES_PER_ELEMENT);
-		xAtlas.HEAPF32.set(uv, meshInfo.uvOffset / Float32Array.BYTES_PER_ELEMENT);
 		
         const status = xAtlas.addMesh();
 
@@ -30,56 +61,45 @@ export const unwrap = async (document: Document, ...input: Primitive[]) => {
 		map.set(meshInfo.meshId, primitive);
 	}
 
-	xAtlas.generateAtlas(xAtlas.defaultChartOptions(), xAtlas.defaultPackOptions());
+	xAtlas.generateAtlas({
+		...xAtlas.defaultChartOptions(),
+		...options.chartOptions,
+	}, {
+		...xAtlas.defaultPackOptions(),
+		...options.packOptions,
+	});
 
 	for (const meshId of map.keys()) {
 		const primitive = map.get(meshId)!;
 
 		const meshInfo = xAtlas.getMeshData(meshId);
 
-		const original = {
-			position: primitive.getAttribute('POSITION')?.getArray()!,
-			normal: primitive.getAttribute('NORMAL')?.getArray()!,
-			uv: primitive.getAttribute('TEXCOORD_0')?.getArray()!
-		};
-
-		const revamped = {
-			index: new Uint16Array(xAtlas.HEAPU32.subarray(meshInfo.indexOffset / 4, meshInfo.indexOffset / 4 + meshInfo.newIndexCount)),
-			position: new Float32Array(meshInfo.newVertexCount * 3),
-			normal: new Float32Array(meshInfo.newVertexCount * 3),
-			uv: new Float32Array(meshInfo.newVertexCount * 2),
-			uv2: new Float32Array(xAtlas.HEAPF32.subarray(meshInfo.uvOffset / 4, meshInfo.uvOffset / 4 + meshInfo.newVertexCount * 2))
-		};
-
-		let oldIndexes = new Uint16Array(xAtlas.HEAPU32.subarray(meshInfo.originalIndexOffset / 4, meshInfo.originalIndexOffset / 4 + meshInfo.newVertexCount));
+		let originalIndexData = new Uint16Array(xAtlas.HEAPU32.subarray(meshInfo.originalIndexOffset / 4, meshInfo.originalIndexOffset / 4 + meshInfo.newVertexCount));
 
 		xAtlas.destroyMeshData(meshInfo);
 
-		for (let i = 0, l = meshInfo.newVertexCount; i < l; i++) {
-			let oldIndex = oldIndexes[i];
+		for(var semantics of primitive.listSemantics()) {
+			const attribute = primitive.getAttribute(semantics);
+			const elementSize = attribute.getElementSize();
 
-			revamped.position[3 * i + 0] = original.position[3 * oldIndex + 0];
-			revamped.position[3 * i + 1] = original.position[3 * oldIndex + 1];
-			revamped.position[3 * i + 2] = original.position[3 * oldIndex + 2];
+			const oldArray = attribute.getArray();
+			const newArray = new Float32Array(meshInfo.newVertexCount * attribute.getElementSize());
 
-			revamped.normal[3 * i + 0] = original.normal[3 * oldIndex + 0];
-			revamped.normal[3 * i + 1] = original.normal[3 * oldIndex + 1];
-			revamped.normal[3 * i + 2] = original.normal[3 * oldIndex + 2];
+			for (let i = 0, l = meshInfo.newVertexCount; i < l; i++) {
+				let originalIndex = originalIndexData[i];
+				
+				for (let index = 0; index < attribute.getElementSize(); index++) {
+					newArray[elementSize * i + index] = oldArray[elementSize * originalIndex + index];
+				}
+			}
 
-			revamped.uv[2 * i + 0] = original.uv[2 * oldIndex + 0];
-			revamped.uv[2 * i + 1] = original.uv[2 * oldIndex + 1];
+			attribute.setArray(newArray);
 		}
 
 		const indices = primitive.getIndices();
-		const positions = primitive.getAttribute('POSITION');
-		const normal = primitive.getAttribute('NORMAL');
-		const uv = primitive.getAttribute('TEXCOORD_0');
+		indices?.setArray(new Uint16Array(xAtlas.HEAPU32.subarray(meshInfo.indexOffset / 4, meshInfo.indexOffset / 4 + meshInfo.newIndexCount)));
 
-		indices?.setArray(revamped.index);
-		positions?.setArray(revamped.position);
-		normal?.setArray(revamped.normal);
-		uv?.setArray(revamped.uv);
-
-		primitive.setAttribute('TEXCOORD_1', document.createAccessor('TEXCOORD_1').setType("VEC2").setArray(revamped.uv2));
+		const uv2 = document.createAccessor(options.attributeName).setType("VEC2").setArray(new Float32Array(xAtlas.HEAPF32.subarray(meshInfo.uvOffset / 4, meshInfo.uvOffset / 4 + meshInfo.newVertexCount * 2)));
+		primitive.setAttribute(options.attributeName, uv2);
 	}
 };

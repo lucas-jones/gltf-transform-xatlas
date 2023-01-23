@@ -26,6 +26,8 @@ echo "============================================="
     -s MALLOC=emmalloc \
     -s MODULARIZE=1 \
     -s EXPORT_NAME="createXAtlasModule" \
+    -s EXPORT_ES6=1 \
+    -s SINGLE_FILE \
     -o ./source/web/build/xatlas.js \
     --js-library ./source/web/jslib.js \
     source/web/*.cpp \
@@ -40,9 +42,7 @@ echo "============================================="
 #    Uncomment above line for leak checking
 
   # Move artifacts
-  mv source/web/build/xatlas.wasm ../src/xatlas
   mv source/web/build/xatlas.js ../src/xatlas
-#  mv source/web/build/xatlas.wasm.map dist
 
 )
 echo "============================================="
