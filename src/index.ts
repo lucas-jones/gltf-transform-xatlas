@@ -48,8 +48,7 @@ export const unwrap = async (document: Document, input: (Mesh | Primitive)[], op
 		const positions = primitive.getAttribute('POSITION')?.getArray()!;
 
 		const meshInfo = xAtlas.createMesh(positions.length / 3, indices.length, false, false);
-
-		xAtlas.HEAPU16.set(indices, meshInfo.indexOffset / Uint16Array.BYTES_PER_ELEMENT);
+		xAtlas.HEAPU32.set(indices, meshInfo.indexOffset / Uint32Array.BYTES_PER_ELEMENT);
 		xAtlas.HEAPF32.set(positions, meshInfo.positionOffset / Float32Array.BYTES_PER_ELEMENT);
 		
         const status = xAtlas.addMesh();
@@ -74,9 +73,7 @@ export const unwrap = async (document: Document, input: (Mesh | Primitive)[], op
 
 		const meshInfo = xAtlas.getMeshData(meshId);
 
-		let originalIndexData = new Uint16Array(xAtlas.HEAPU32.subarray(meshInfo.originalIndexOffset / 4, meshInfo.originalIndexOffset / 4 + meshInfo.newVertexCount));
-
-		xAtlas.destroyMeshData(meshInfo);
+		let originalIndexData = new Uint32Array(xAtlas.HEAPU32.subarray(meshInfo.originalIndexOffset / 4, meshInfo.originalIndexOffset / 4 + meshInfo.newVertexCount));
 
 		for(var semantics of primitive.listSemantics()) {
 			const attribute = primitive.getAttribute(semantics);
@@ -97,9 +94,11 @@ export const unwrap = async (document: Document, input: (Mesh | Primitive)[], op
 		}
 
 		const indices = primitive.getIndices();
-		indices?.setArray(new Uint16Array(xAtlas.HEAPU32.subarray(meshInfo.indexOffset / 4, meshInfo.indexOffset / 4 + meshInfo.newIndexCount)));
+		indices?.setArray(new Uint32Array(xAtlas.HEAPU32.subarray(meshInfo.indexOffset / 4, meshInfo.indexOffset / 4 + meshInfo.newIndexCount)));
 
-		const uv2 = document.createAccessor(options.attributeName).setType("VEC2").setArray(new Float32Array(xAtlas.HEAPF32.subarray(meshInfo.uvOffset / 4, meshInfo.uvOffset / 4 + meshInfo.newVertexCount * 2)));
+		const uv2 = document.createAccessor(options.attributeName).setType("VEC2").setArray(new Float32Array(xAtlas.HEAPF32.subarray(meshInfo.uvOffset / Float32Array.BYTES_PER_ELEMENT, meshInfo.uvOffset / Float32Array.BYTES_PER_ELEMENT + meshInfo.newVertexCount * 2)));
 		primitive.setAttribute(options.attributeName, uv2);
+
+		xAtlas.destroyMeshData(meshInfo);
 	}
 };
